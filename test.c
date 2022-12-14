@@ -15,6 +15,13 @@ int flowsC = 0;
 /* Finds the payload of a TCP/IP packet */
 void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_char *packet)
 {
+     /* Header lengths in bytes */
+    int ethernet_header_length = 14; /* Doesn't change */
+    int ip_header_length;
+    int payload_length;
+    int tcp_header_length;
+    int udp_header_length;
+
     flowsC++;
     printf("\n========    %d    ========\n", flowsC);
     /* First, lets make sure we have an IP packet */
@@ -28,6 +35,9 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
 
     struct ip *ip_h = (struct ip *)(packet + sizeof(struct ether_header));
 
+    ip_header_length = ip_h->ip_hl;
+    
+
     if(ip_h->ip_p == IPPROTO_UDP){
         printf("--\tUDP\t--\n");
         UDPcount++;
@@ -37,7 +47,11 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
         struct udphdr *udp_h = (struct udphdr *)(packet + sizeof(struct ether_header) + sizeof(struct ip));
         printf("Source port: %d\n", ntohs(udp_h->uh_sport));
         printf("Destination port: %d\n", ntohs(udp_h->uh_dport));
-        // printf("UDP head length: %d\n", ntohs(udp_h->uh_ulen));
+        udp_header_length = ntohs(udp_h->uh_ulen);
+        printf("UDP head length: %d\n", udp_header_length);
+        payload_length = header->caplen - (ethernet_header_length + ip_header_length + udp_header_length);
+        printf("UDP Payload: %d\n", payload_length);
+        
     } else if(ip_h->ip_p == IPPROTO_TCP){
         printf("--\tTCP\t--\n");
         TCPcount++;
@@ -47,7 +61,11 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
         struct tcphdr *tcp_h = (struct tcphdr *)(packet + sizeof(struct ether_header) + sizeof(struct ip));
         printf("Source port: %d\n", ntohs(tcp_h->th_sport));
         printf("Destination port: %d\n", ntohs(tcp_h->th_dport));
-        //  ptintf("UDP head length: %d\n", ntohs(tcp_h->)); ====TODO====
+        printf("IP head length: %d\n", ip_header_length);
+        tcp_header_length = tcp_h->th_off;
+        printf("TCP head length: %d\n", tcp_header_length);
+        payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
+        printf("TCP Payload: %d\n", payload_length);
     } else{
         printf("Not an UDP/TCP packet. Skipping...\n\n");
         return;
@@ -66,12 +84,12 @@ int main(int argc, char **argv) {
     int total_packet_count = 200;
     u_char *my_arguments = NULL;
     
-    handle = pcap_open_live(device, snapshot_length, 0, 10000, error_buffer);
-    if (handle == NULL) {
-                fprintf(stderr, "Could not open device %s: %s\n", device, error_buffer);
-                return 2;
-            }    
-    // handle = pcap_open_offline("test_pcap_5mins.pcap", error_buffer);
+    // handle = pcap_open_live(device, snapshot_length, 0, 1000, error_buffer);
+    // if (handle == NULL) {
+    //             fprintf(stderr, "Could not open device %s: %s\n", device, error_buffer);
+    //             return 2;
+    //         }
+    handle = pcap_open_offline("test_pcap_5mins.pcap", error_buffer);
     pcap_loop(handle, 0, my_packet_handler, my_arguments);
 
     printf("UDP packets: %d\n", UDPcount);
