@@ -4,6 +4,10 @@
 #include <pcap.h>
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
+#include <netinet/ip.h>
+
+int UDPcount = 0;
+int TCPcount = 0;
 
 void print_packet_info(const u_char *packet, struct pcap_pkthdr packet_header) {
     printf("Packet capture length: %d\n", packet_header.caplen);
@@ -18,6 +22,21 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *packet_header,cons
         printf("Not an IP packet. Skipping...\n\n");
         return;
     }
+
+    struct ip *ip_h = (struct ip *)(packet_body + sizeof(struct ether_header));
+
+    if(ip_h->ip_p == IPPROTO_UDP){
+        printf("its UDP\n");
+        UDPcount++;
+    } else if(ip_h->ip_p == IPPROTO_TCP){
+        printf("its TCP\n");
+        TCPcount++;
+    } else{
+        printf("Not an UDP/TCP packet. Skipping...\n\n");
+        return;
+    }
+
+    
     print_packet_info(packet_body, *packet_header);
     return;
 }
