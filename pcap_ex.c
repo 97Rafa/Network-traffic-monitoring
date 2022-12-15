@@ -39,7 +39,7 @@ void my_packet_handler_OFFLINE(u_char *args,const struct pcap_pkthdr *header,con
 
     struct ip *ip_h = (struct ip *)(packet + sizeof(struct ether_header));
 
-    ip_header_length = ip_h->ip_hl * 4;    
+    ip_header_length = ip_h->ip_hl * 4;
 
     if(ip_h->ip_p == IPPROTO_UDP){
         printf("--\tUDP\t--\n");
