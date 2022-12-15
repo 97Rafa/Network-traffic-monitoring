@@ -3,3 +3,4 @@ default:
 
 clean:
 	rm -rf pcap_ex
+	rm -rf log.txt
