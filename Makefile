@@ -1,9 +1,5 @@
 default:
-	gcc assign5.c -o assign5 -lpcap
-
-test:
-	gcc test.c -o test -lpcap
+	gcc pcap_ex.c -o pcap_ex -lpcap
 
 clean:
-	rm -rf test
-	rm -rf assign5
+	rm -rf pcap_ex

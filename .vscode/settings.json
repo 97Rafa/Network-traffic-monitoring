@@ -3,6 +3,8 @@
         "**/.i3/config": "i3",
         "**/i3/config": "i3",
         "if_ether.h": "c",
-        "tcp.h": "c"
+        "tcp.h": "c",
+        "ip.h": "c",
+        "in.h": "c"
     }
 }
