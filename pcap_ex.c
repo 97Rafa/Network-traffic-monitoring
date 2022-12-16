@@ -44,6 +44,7 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
     int payload_length;
     int tcp_header_length;
     int udp_header_length;
+    const u_char *p_payload;
 
     totalPackets++;
     /* First, lets make sure we have an IP packet */
@@ -84,6 +85,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                     payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
                     UDPbytes += payload_length;
                     printf("UDP Payload: %d\n", payload_length);
+                    p_payload = packet + (sizeof(struct ether_header) + ip_header_length + udp_header_length);
+                    printf("Payload offset: %p\n", p_payload);
                     printf("===     end of %d     ========\n\n", totalPackets);
                 }
                 
@@ -101,6 +104,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                 payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
                 UDPbytes += payload_length;
                 printf("UDP Payload: %d\n", payload_length);
+                p_payload = packet + (sizeof(struct ether_header) + ip_header_length + udp_header_length);
+                printf("Payload offset: %p\n", p_payload);
                 printf("===     end of %d     ========\n\n", totalPackets);
             }
             
@@ -126,6 +131,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                     payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
                     TCPbytes += payload_length;
                     printf("TCP Payload: %d\n", payload_length);
+                    p_payload = packet + (sizeof(struct ether_header) + ip_header_length + tcp_header_length);
+                    printf("Payload offset: %p\n", p_payload);
                     if (tcp_h->seq < tcp_h->ack_seq)
                     {
                         printf("!!!\tRETRASMISSION\t!!!\n");
@@ -147,6 +154,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                 payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
                 TCPbytes += payload_length;
                 printf("TCP Payload: %d\n", payload_length);
+                p_payload = packet + (sizeof(struct ether_header) + ip_header_length + tcp_header_length);
+                printf("Payload offset: %p\n", p_payload);
                 if (tcp_h->seq < tcp_h->ack_seq)
                 {
                     printf("!!!\tRETRASMISSION\t!!!\n");
@@ -183,6 +192,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                     fprintf(fp,"UDP head length: %lu\n", sizeof(struct udphdr));
                     payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
                     fprintf(fp,"UDP Payload: %d\n", payload_length);
+                    p_payload = packet + (sizeof(struct ether_header) + ip_header_length + udp_header_length);
+                    fprintf(fp, "Payload offset: %p\n", p_payload);
                     fclose(fp);
                 }
                 
@@ -201,6 +212,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                 fprintf(fp,"UDP head length: %lu\n", sizeof(struct udphdr));
                 payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
                 fprintf(fp,"UDP Payload: %d\n", payload_length);
+                p_payload = packet + (sizeof(struct ether_header) + ip_header_length + udp_header_length);
+                fprintf(fp, "Payload offset: %p\n", p_payload);
                 fclose(fp);
             }
             
@@ -227,6 +240,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                     fprintf(fp,"TCP head length: %d\n", tcp_header_length);
                     payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
                     fprintf(fp,"TCP Payload: %d\n", payload_length);
+                    p_payload = packet + (sizeof(struct ether_header) + ip_header_length + tcp_header_length);
+                    fprintf(fp, "Payload offset: %p\n", p_payload);
                     if (tcp_h->seq < tcp_h->ack_seq)
                     {
                         fprintf(fp,"!!!\tRETRASMISSION\t!!!\n");
@@ -248,8 +263,8 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                 tcp_header_length = tcp_h->th_off*4;
                 TCPbytes += tcp_header_length;
                 fprintf(fp,"TCP head length: %d\n", tcp_header_length);
-                payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
-                fprintf(fp,"TCP Payload: %d\n", payload_length);
+                p_payload = packet + (sizeof(struct ether_header) + ip_header_length + tcp_header_length);
+                fprintf(fp, "Payload offset: %p\n", p_payload);
                 if (tcp_h->seq < tcp_h->ack_seq)
                     {
                         fprintf(fp,"!!!\tRETRASMISSION\t!!!\n");
