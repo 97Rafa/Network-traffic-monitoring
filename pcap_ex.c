@@ -33,12 +33,12 @@ long int TCPbytes = 0;
 capFlows *myFlows;
 int filter;
 bool hasFilter = false;
+char *typeOfCap;
 
-void my_packet_handler_OFFLINE(u_char *args,const struct pcap_pkthdr *header,const u_char *packet)
+void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_char *packet)
 {
-    
-   
      /* Header lengths in bytes */
+    FILE *fp;
     int ethernet_header_length = 14; /* Doesn't change */
     int ip_header_length;
     int payload_length;
@@ -61,15 +61,33 @@ void my_packet_handler_OFFLINE(u_char *args,const struct pcap_pkthdr *header,con
     char *prot=NULL;
     ip_header_length = ip_h->ip_hl * 4;
     uint seqnum;
-
-    if(ip_h->ip_p == IPPROTO_UDP){    
-        struct udphdr *udp_h = (struct udphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
-        dport = ntohs(udp_h->uh_dport);
-        sport = ntohs(udp_h->uh_sport);
-        if (hasFilter == true)
-        {
-            if (filter == sport)
+    if (typeOfCap == "offline")
+    {
+        if(ip_h->ip_p == IPPROTO_UDP){    
+            struct udphdr *udp_h = (struct udphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
+            dport = ntohs(udp_h->uh_dport);
+            sport = ntohs(udp_h->uh_sport);
+            if (hasFilter == true)
             {
+                if (filter == sport)
+                {
+                    prot = "UDP";    
+                    UDPcount++;
+                    printf("\n========    %d    ========\n", totalPackets);
+                    printf("--\tUDP\t--\n");
+                    printf("Source IP: %s\n", inet_ntoa(ip_h->ip_src));
+                    printf("Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));
+                    printf("Source port: %d\n", sport);
+                    printf("Destination port: %d\n", dport);
+                    udp_header_length = ntohs(udp_h->uh_ulen);
+                    printf("UDP head length: %lu\n", sizeof(struct udphdr));
+                    payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
+                    UDPbytes += payload_length;
+                    printf("UDP Payload: %d\n", payload_length);
+                    printf("===     end of %d     ========\n\n", totalPackets);
+                }
+                
+            } else {
                 prot = "UDP";    
                 UDPcount++;
                 printf("\n========    %d    ========\n", totalPackets);
@@ -86,31 +104,35 @@ void my_packet_handler_OFFLINE(u_char *args,const struct pcap_pkthdr *header,con
                 printf("===     end of %d     ========\n\n", totalPackets);
             }
             
-        } else {
-            prot = "UDP";    
-            UDPcount++;
-            printf("\n========    %d    ========\n", totalPackets);
-            printf("--\tUDP\t--\n");
-            printf("Source IP: %s\n", inet_ntoa(ip_h->ip_src));
-            printf("Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));
-            printf("Source port: %d\n", sport);
-            printf("Destination port: %d\n", dport);
-            udp_header_length = ntohs(udp_h->uh_ulen);
-            printf("UDP head length: %lu\n", sizeof(struct udphdr));
-            payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
-            UDPbytes += payload_length;
-            printf("UDP Payload: %d\n", payload_length);
-            printf("===     end of %d     ========\n\n", totalPackets);
-        }
-        
-    } else if(ip_h->ip_p == IPPROTO_TCP){
-        struct tcphdr *tcp_h = (struct tcphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
-        sport = ntohs(tcp_h->th_sport);
-        dport = ntohs(tcp_h->th_dport);
+        } else if(ip_h->ip_p == IPPROTO_TCP){
+            struct tcphdr *tcp_h = (struct tcphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
+            sport = ntohs(tcp_h->th_sport);
+            dport = ntohs(tcp_h->th_dport);
 
-        if (hasFilter == true)
-        {
-            if(filter == sport){
+            if (hasFilter == true)
+            {
+                if(filter == sport){
+                    prot = "TCP";
+                    TCPcount++;
+                    printf("\n========    %d    ========\n", totalPackets);
+                    printf("--\tTCP\t--\n");
+                    printf("Source IP: %s\n", inet_ntoa(ip_h->ip_src));
+                    printf("Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));                
+                    printf("Source port: %d\n", sport);
+                    printf("Destination port: %d\n", dport);
+                    printf("IP head length: %d\n", ip_header_length);
+                    tcp_header_length = tcp_h->th_off*4;
+                    printf("TCP head length: %d\n", tcp_header_length);
+                    payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
+                    TCPbytes += payload_length;
+                    printf("TCP Payload: %d\n", payload_length);
+                    if (tcp_h->seq < tcp_h->ack_seq)
+                    {
+                        printf("!!!\tRETRASMISSION\t!!!\n");
+                    }
+                    printf("===     end of %d     ========\n\n", totalPackets);
+                }
+            }else{
                 prot = "TCP";
                 TCPcount++;
                 printf("\n========    %d    ========\n", totalPackets);
@@ -131,116 +153,40 @@ void my_packet_handler_OFFLINE(u_char *args,const struct pcap_pkthdr *header,con
                 }
                 printf("===     end of %d     ========\n\n", totalPackets);
             }
-        }else{
-            prot = "TCP";
-            TCPcount++;
-            printf("\n========    %d    ========\n", totalPackets);
-            printf("--\tTCP\t--\n");
-            printf("Source IP: %s\n", inet_ntoa(ip_h->ip_src));
-            printf("Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));                
-            printf("Source port: %d\n", sport);
-            printf("Destination port: %d\n", dport);
-            printf("IP head length: %d\n", ip_header_length);
-            tcp_header_length = tcp_h->th_off*4;
-            printf("TCP head length: %d\n", tcp_header_length);
-            payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
-            TCPbytes += payload_length;
-            printf("TCP Payload: %d\n", payload_length);
-            if (tcp_h->seq < tcp_h->ack_seq)
-            {
-                printf("!!!\tRETRASMISSION\t!!!\n");
-            }
-            printf("===     end of %d     ========\n\n", totalPackets);
-        }
 
-        
-    } else{
-        printf("Not an UDP/TCP packet. Skipping...\n\n");
-        return;
-    }
-
-    int alreadySeen = 0;
-    for (int i = 0; i < flowsC; i++)
-    {   
-        if (strcmp(myFlows[i].srcIP,inet_ntoa(ip_h->ip_src)) == 0 && strcmp(myFlows[i].dstIP,inet_ntoa(ip_h->ip_dst)) == 0 && myFlows[i].srcPort == sport && myFlows[i].dstPort == dport)
-        {
-            alreadySeen = 1;            
-            break;
-        }
-    }
-
-    if (alreadySeen == 0)
-    {
-        if(prot == "UDP"){
-            UDPflows++;
-            myFlows = realloc(myFlows, (flowsC+1)*sizeof(capFlows));
-            myFlows[flowsC].srcIP=(char *)malloc(INET_ADDRSTRLEN);
-            myFlows[flowsC].dstIP=(char *)malloc(INET_ADDRSTRLEN);
-            strcpy(myFlows[flowsC].srcIP,inet_ntoa(ip_h->ip_src));
-            strcpy(myFlows[flowsC].dstIP,inet_ntoa(ip_h->ip_dst));
-            myFlows[flowsC].dstPort = dport;
-            myFlows[flowsC].srcPort = sport;
-            myFlows[flowsC].protocol = prot;
-            flowsC++;
-        } else if (prot == "TCP")
-        {
-            TCPflows++;
-            myFlows = realloc(myFlows, (flowsC+1)*sizeof(capFlows));
-            myFlows[flowsC].srcIP=(char *)malloc(INET_ADDRSTRLEN);
-            myFlows[flowsC].dstIP=(char *)malloc(INET_ADDRSTRLEN);
-            strcpy(myFlows[flowsC].srcIP,inet_ntoa(ip_h->ip_src));
-            strcpy(myFlows[flowsC].dstIP,inet_ntoa(ip_h->ip_dst));
-            myFlows[flowsC].dstPort = dport;
-            myFlows[flowsC].srcPort = sport;
-            myFlows[flowsC].protocol = prot;
-            flowsC++;
-        } else {
+            
+        } else{
+            printf("Not an UDP/TCP packet. Skipping...\n\n");
             return;
         }
-        
-    }
-    
-}
-
-
-void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_char *packet)
-{
-    FILE *fp;
-    
-     /* Header lengths in bytes */
-    int ethernet_header_length = 14; /* Doesn't change */
-    int ip_header_length;
-    int payload_length;
-    int tcp_header_length;
-    int udp_header_length;
-    
-    totalPackets++;
-    
-    /* First, lets make sure we have an IP packet */
-    struct ether_header *eth_header;
-    eth_header = (struct ether_header *) packet;
-    if (ntohs(eth_header->ether_type) != ETHERTYPE_IP) {
-        fp = fopen("log.txt", "a+");
-        fprintf(fp,"Not an IP packet. Skipping...\n\n");
-        fclose(fp);
-        return;
-    }
-
-
-    struct ip *ip_h = (struct ip *)(packet + sizeof(struct ether_header));
-    int sport;
-    int dport;
-    char *prot;
-    ip_header_length = ip_h->ip_hl * 4;    
-
-    if(ip_h->ip_p == IPPROTO_UDP){
-        struct udphdr *udp_h = (struct udphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
-        dport = ntohs(udp_h->uh_dport);
-        sport = ntohs(udp_h->uh_sport);
-        if (hasFilter == true)
-        {
-            if (filter == sport)
+    } else if (typeOfCap == "online")
+    {
+        if(ip_h->ip_p == IPPROTO_UDP){
+            struct udphdr *udp_h = (struct udphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
+            dport = ntohs(udp_h->uh_dport);
+            sport = ntohs(udp_h->uh_sport);
+            if (hasFilter == true)
             {
+                if (filter == sport)
+                {
+                    prot = "UDP";
+                    UDPcount++;
+                    fp = fopen("log.txt", "a+");
+                    fprintf(fp,"\n========    %d    ========\n", totalPackets);
+                    fprintf(fp,"--\tUDP\t--\n");
+                    fprintf(fp,"Source IP: %s\n", inet_ntoa(ip_h->ip_src));
+                    fprintf(fp,"Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));
+                    fprintf(fp,"Source port: %d\n", sport);
+                    fprintf(fp,"Destination port: %d\n", dport);
+                    udp_header_length = ntohs(udp_h->uh_ulen);
+                    UDPbytes += udp_header_length;
+                    fprintf(fp,"UDP head length: %lu\n", sizeof(struct udphdr));
+                    payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
+                    fprintf(fp,"UDP Payload: %d\n", payload_length);
+                    fclose(fp);
+                }
+                
+            } else {
                 prot = "UDP";
                 UDPcount++;
                 fp = fopen("log.txt", "a+");
@@ -258,32 +204,37 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                 fclose(fp);
             }
             
-        } else {
-            prot = "UDP";
-            UDPcount++;
-            fp = fopen("log.txt", "a+");
-            fprintf(fp,"\n========    %d    ========\n", totalPackets);
-            fprintf(fp,"--\tUDP\t--\n");
-            fprintf(fp,"Source IP: %s\n", inet_ntoa(ip_h->ip_src));
-            fprintf(fp,"Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));
-            fprintf(fp,"Source port: %d\n", sport);
-            fprintf(fp,"Destination port: %d\n", dport);
-            udp_header_length = ntohs(udp_h->uh_ulen);
-            UDPbytes += udp_header_length;
-            fprintf(fp,"UDP head length: %lu\n", sizeof(struct udphdr));
-            payload_length = header->caplen - (ethernet_header_length + ip_header_length + sizeof(struct udphdr));
-            fprintf(fp,"UDP Payload: %d\n", payload_length);
-            fclose(fp);
-        }
-        
-    } else if(ip_h->ip_p == IPPROTO_TCP){
-        struct tcphdr *tcp_h = (struct tcphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
-        dport = ntohs(tcp_h->th_dport);
-        sport = ntohs(tcp_h->th_sport);
-        if (hasFilter == true)
-        {
-            if (filter == sport)
+        } else if(ip_h->ip_p == IPPROTO_TCP){
+            struct tcphdr *tcp_h = (struct tcphdr *)(packet + sizeof(struct ether_header) + ip_header_length);
+            dport = ntohs(tcp_h->th_dport);
+            sport = ntohs(tcp_h->th_sport);
+            if (hasFilter == true)
             {
+                if (filter == sport)
+                {
+                    prot = "TCP";
+                    TCPcount++;
+                    fp = fopen("log.txt", "a+");
+                    fprintf(fp,"\n========    %d    ========\n", totalPackets);
+                    fprintf(fp,"--\tTCP\t--\n");
+                    fprintf(fp,"Source IP: %s\n", inet_ntoa(ip_h->ip_src));
+                    fprintf(fp,"Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));
+                    fprintf(fp,"Source port: %d\n", sport);
+                    fprintf(fp,"Destination port: %d\n", dport);
+                    fprintf(fp,"IP head length: %d\n", ip_header_length);
+                    tcp_header_length = tcp_h->th_off*4;
+                    TCPbytes += tcp_header_length;
+                    fprintf(fp,"TCP head length: %d\n", tcp_header_length);
+                    payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
+                    fprintf(fp,"TCP Payload: %d\n", payload_length);
+                    if (tcp_h->seq < tcp_h->ack_seq)
+                    {
+                        fprintf(fp,"!!!\tRETRASMISSION\t!!!\n");
+                    }
+                    fclose(fp);
+                }
+                
+            } else {
                 prot = "TCP";
                 TCPcount++;
                 fp = fopen("log.txt", "a+");
@@ -300,43 +251,21 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
                 payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
                 fprintf(fp,"TCP Payload: %d\n", payload_length);
                 if (tcp_h->seq < tcp_h->ack_seq)
-                {
-                    fprintf(fp,"!!!\tRETRASMISSION\t!!!\n");
-                }
+                    {
+                        fprintf(fp,"!!!\tRETRASMISSION\t!!!\n");
+                    }
                 fclose(fp);
             }
             
-        } else {
-            prot = "TCP";
-            TCPcount++;
+            
+        } else{
             fp = fopen("log.txt", "a+");
-            fprintf(fp,"\n========    %d    ========\n", totalPackets);
-            fprintf(fp,"--\tTCP\t--\n");
-            fprintf(fp,"Source IP: %s\n", inet_ntoa(ip_h->ip_src));
-            fprintf(fp,"Destination IP: %s\n", inet_ntoa(ip_h->ip_dst));
-            fprintf(fp,"Source port: %d\n", sport);
-            fprintf(fp,"Destination port: %d\n", dport);
-            fprintf(fp,"IP head length: %d\n", ip_header_length);
-            tcp_header_length = tcp_h->th_off*4;
-            TCPbytes += tcp_header_length;
-            fprintf(fp,"TCP head length: %d\n", tcp_header_length);
-            payload_length = header->caplen - (ethernet_header_length + ip_header_length + tcp_header_length);
-            fprintf(fp,"TCP Payload: %d\n", payload_length);
-            if (tcp_h->seq < tcp_h->ack_seq)
-                {
-                    fprintf(fp,"!!!\tRETRASMISSION\t!!!\n");
-                }
+            fprintf(fp,"Not an UDP/TCP packet. Skipping...\n\n");
             fclose(fp);
+            return;
         }
-        
-        
-    } else{
-        fp = fopen("log.txt", "a+");
-        fprintf(fp,"Not an UDP/TCP packet. Skipping...\n\n");
-        fclose(fp);
-        return;
     }
-    
+
     int alreadySeen = 0;
     for (int i = 0; i < flowsC; i++)
     {   
@@ -377,6 +306,7 @@ void my_packet_handler(u_char *args,const struct pcap_pkthdr *header,const u_cha
         }
         
     }
+    
 }
 
 void stop_capture()
@@ -407,7 +337,6 @@ int main(int argc, char *argv[]) {
     char *interface;
     char *inFile;
     char *arg;
-    char *typeOfCap;
 
     int opt;
     while ((opt = getopt(argc, argv, "i:r:f:h")) != -1) {
@@ -440,12 +369,7 @@ int main(int argc, char *argv[]) {
             break;
         }
     }
-    if (strcmp(typeOfCap, "online")==0)
-    {
-        pcap_loop(handle, 0, my_packet_handler, NULL);
-    } else {
-        pcap_loop(handle, 0, my_packet_handler_OFFLINE, NULL);
-    }
+    pcap_loop(handle, 0, my_packet_handler, NULL);
     stop_capture();
     return 0;
 }
