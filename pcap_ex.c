@@ -349,6 +349,7 @@ int main(int argc, char *argv[]) {
     char error_buffer[PCAP_ERRBUF_SIZE];
     pcap_t *handle;
     int timeout_limit = 1000; /* In milliseconds */
+    int packLimit = 0;
     char *interface;
     char *inFile;
     char *arg;
@@ -384,7 +385,7 @@ int main(int argc, char *argv[]) {
             break;
         }
     }
-    pcap_loop(handle, 0, my_packet_handler, NULL);
+    pcap_loop(handle, packLimit, my_packet_handler, NULL);
     stop_capture();
     return 0;
 }

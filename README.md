@@ -16,6 +16,9 @@
     for capturing packets from a network adapter.
 4. -h Help message
 
+### NOTE:
+    While capturing packets you can limit the packets to capture
+    by changing the variable "packLimit", in the main function.
 
 
 gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
